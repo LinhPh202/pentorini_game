@@ -2,38 +2,40 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    /* Ngăn chặn mọi hành vi chạm mặc định của trình duyệt */
+    /* Vẫn giữ chặn touch-action để xử lý kéo thả trên canvas mượt mà */
     touch-action: none; 
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    overscroll-behavior: none;
 }
 
 body {
     background-color: #F0E6D2;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden; /* Cấm cuộn tuyệt đối */
+    width: 100%;
+    /* QUAN TRỌNG: Cho phép cuộn dọc nếu nội dung dài */
+    min-height: 100vh;
+    overflow-y: auto; 
     font-family: sans-serif;
-    position: relative; /* Để định vị nút bấm */
+    position: relative;
 }
 
 canvas {
     display: block;
     width: 100%;
-    height: 100%;
+    /* Chiều cao sẽ do JS quyết định */
     background-color: #F0E6D2;
+    /* Quan trọng: Để canvas nhận sự kiện kéo thả, nhưng không chặn cuộn trang khi chạm ngoài vùng khối */
+    touch-action: pan-y; 
 }
 
-/* Container cho nút bấm trôi nổi */
+/* Nút bấm cố định trên màn hình khi cuộn */
 .floating-controls {
-    position: absolute;
+    position: fixed; /* Đổi từ absolute sang fixed */
     top: 15px;
-    right: 15px; /* Đặt góc phải để không che bảng (thường bảng canh giữa) */
+    right: 15px;
     display: flex;
     gap: 10px;
-    z-index: 100; /* Luôn nằm trên canvas */
+    z-index: 100;
 }
 
 button {
@@ -41,8 +43,8 @@ button {
     padding: 0 15px;
     font-size: 14px;
     border: none;
-    border-radius: 20px; /* Bo tròn nhìn mềm mại hơn */
-    background-color: rgba(160, 100, 60, 0.9); /* Màu bán trong suốt */
+    border-radius: 20px;
+    background-color: rgba(160, 100, 60, 0.9);
     color: white;
     font-weight: bold;
     box-shadow: 0 4px 6px rgba(0,0,0,0.2);
