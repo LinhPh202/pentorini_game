@@ -6,10 +6,10 @@ const BOARD_ROWS = 9;
 const BOARD_COLS = 7;
 let CELL_SIZE = 30; 
 
-// GIẢM TỶ LỆ XUỐNG CÒN 0.4 (40%)
-const TRAY_SCALE = 0.4; 
-// GIẢM KHOẢNG CÁCH GIỮA CÁC KHỐI
-const TRAY_GAP = 10; 
+// GIẢM TỶ LỆ XUỐNG CÒN 0.35 (35%) ĐỂ SIÊU NHỎ GỌN
+const TRAY_SCALE = 0.35; 
+// Thu hẹp khoảng cách
+const TRAY_GAP = 8; 
 
 let MARGIN_X = 10;
 let MARGIN_Y = 60; 
@@ -100,7 +100,6 @@ class Piece {
     containsPoint(mx, my) {
         const scale = this.getCurrentScale();
         const drawSize = CELL_SIZE * scale;
-        // Hitbox vẫn giữ rộng để dễ bấm dù hình nhỏ
         const buffer = 15; 
 
         for (let cell of this.shape) {
@@ -223,21 +222,20 @@ function resizeCanvas() {
     canvas.width = w;
     canvas.height = h;
 
-    // Tính toán lại kích thước ô
-    // Bảng 9 dòng + Margin.
-    // Khay chứa: 12 khối chia làm 2 hàng => Cần thêm không gian cho 2 hàng khối to + khoảng cách
-    // Với Scale 0.4, 2 hàng khối chiếm khoảng 2-3 dòng chuẩn.
-    // Tổng cộng ta dự trù không gian tương đương 12-13 dòng chuẩn.
-    const totalRowsNeeded = BOARD_ROWS + 4; 
+    // Tính toán lại không gian.
+    // Với scale 0.35 và đã xoay dọc, khay chứa rất gọn.
+    // Chỉ cần dự trù khoảng 3 dòng chuẩn cho toàn bộ khay.
+    const totalRowsNeeded = BOARD_ROWS + 3; 
     
     const sizeByHeight = h / (totalRowsNeeded + 1);
-    const sizeByWidth = (w - 20) / BOARD_COLS; 
+    const sizeByWidth = (w - 10) / BOARD_COLS; 
     
     CELL_SIZE = Math.min(sizeByHeight, sizeByWidth);
-    if (CELL_SIZE < 25) CELL_SIZE = 25; 
+    // Đảm bảo kích thước tối thiểu để không quá bé
+    if (CELL_SIZE < 28) CELL_SIZE = 28; 
 
     MARGIN_X = (w - (BOARD_COLS * CELL_SIZE)) / 2;
-    MARGIN_Y = 60; // Dành chỗ cho nút bấm
+    MARGIN_Y = 60; 
 
     createPiecesLayout();
 }
@@ -246,39 +244,50 @@ function createPiecesLayout() {
     pieces = [];
     const keys = Object.keys(SHAPES);
     
-    // Khay bắt đầu ngay dưới bảng
     const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 20; 
     
-    let currentX = 15;
+    let currentX = 10; // Lề trái nhỏ hơn chút
     let currentY = startTrayY;
     let rowMaxH = 0;
     
-    // Kích thước ô trong khay
     const trayCellSize = CELL_SIZE * TRAY_SCALE;
     
-    // Cài đặt đếm để ép xuống dòng sau mỗi 6 khối
-    let count = 0;
-    const ITEMS_PER_ROW = 6;
-
     keys.forEach((key) => {
-        // Logic ép xuống dòng
-        if (count > 0 && count % ITEMS_PER_ROW === 0) {
-            currentX = 15; // Reset về đầu dòng
-            currentY += rowMaxH + TRAY_GAP; // Xuống dòng
-            rowMaxH = 0; // Reset chiều cao dòng
+        // --- LOGIC TỰ ĐỘNG XOAY DỌC ---
+        // Tạo một miếng tạm để kiểm tra kích thước
+        let tempPiece = new Piece(key, 0, 0);
+        
+        // Tính toán chiều rộng và cao của hình dáng mặc định
+        let shape = tempPiece.shape;
+        let defaultWidth = (Math.max(...shape.map(c=>c.c)) + 1);
+        let defaultHeight = (Math.max(...shape.map(c=>c.r)) + 1);
+
+        // Nếu chiều rộng lớn hơn chiều cao (đang nằm ngang) -> Xoay 90 độ
+        if (defaultWidth > defaultHeight) {
+            tempPiece.rotate();
+        }
+        
+        // Lấy hình dáng đã (có thể) xoay để tính toán layout
+        let finalShape = tempPiece.shape;
+        let pWidth = (Math.max(...finalShape.map(c=>c.c)) + 1) * trayCellSize;
+        let pHeight = (Math.max(...finalShape.map(c=>c.r)) + 1) * trayCellSize;
+
+        // --- LOGIC XẾP DÒNG ĐỘNG (Dynamic Wrapping) ---
+        // Nếu khối tiếp theo bị tràn màn hình -> Xuống dòng
+        if (currentX + pWidth > canvas.width - 5) {
+            currentX = 10;
+            currentY += rowMaxH + TRAY_GAP; 
+            rowMaxH = 0;
         }
 
-        let tempShape = SHAPES[key];
-        // Tính kích thước thật của khối
-        let pWidth = (Math.max(...tempShape.map(c=>c.c)) + 1) * trayCellSize;
-        let pHeight = (Math.max(...tempShape.map(c=>c.r)) + 1) * trayCellSize;
-
-        pieces.push(new Piece(key, currentX, currentY));
+        // Cập nhật vị trí cho miếng tạm và đẩy vào mảng chính
+        tempPiece.x = currentX;
+        tempPiece.y = currentY;
+        tempPiece.initialPos = {x: currentX, y: currentY}; // Cập nhật lại vị trí gốc
+        pieces.push(tempPiece);
         
         currentX += pWidth + TRAY_GAP; 
         if (pHeight > rowMaxH) rowMaxH = pHeight;
-        
-        count++;
     });
 }
 
