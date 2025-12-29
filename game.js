@@ -2,16 +2,16 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- CẤU HÌNH ---
-const BOARD_ROWS = 9; // Quay về 9 hàng
+const BOARD_ROWS = 9; 
 const BOARD_COLS = 7;
 let CELL_SIZE = 30; 
 
-// Giảm scale trong khay xuống 0.5 để hiển thị được nhiều hơn
-const TRAY_SCALE = 0.5; 
+// Tỷ lệ trong khay (tray)
+const TRAY_SCALE = 0.55; 
 const TRAY_GAP = 15; 
 
 let MARGIN_X = 10;
-let MARGIN_Y = 60; // Dành khoảng trống bên trên cho nút bấm (nếu cần)
+let MARGIN_Y = 60; 
 
 const COLORS = {
     BG: '#F0E6D2',
@@ -25,8 +25,7 @@ const COLORS = {
 const SHAPE_COLORS = {
     'F': '#EF476F', 'I': '#118AB2', 'L': '#FFD166', 'P': '#06D6A0',
     'N': '#8338EC', 'T': '#FB5607', 'U': '#3A86FF', 'V': '#FF006E',
-    'W': '#8D99AE', 'X': '#E9C46A', 'Y': '#F4A261', 'Z': '#2A9D8F',
-    'S': '#8B4513'
+    'W': '#8D99AE', 'X': '#E9C46A', 'Y': '#F4A261', 'Z': '#2A9D8F'
 };
 
 const BOARD_CONTENT = [
@@ -41,6 +40,7 @@ const BOARD_CONTENT = [
     ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 ];
 
+// Chỉ còn lại 12 khối chính
 const SHAPES = {
     'F': [{r:1,c:0}, {r:1,c:1}, {r:0,c:1}, {r:0,c:2}, {r:2,c:1}],
     'I': [{r:0,c:0}, {r:1,c:0}, {r:2,c:0}, {r:3,c:0}, {r:4,c:0}],
@@ -66,9 +66,7 @@ class Piece {
         this.gridPos = null; 
         this.isDragging = false;
         
-        if (this.key.startsWith('S')) this.color = SHAPE_COLORS['S'];
-        else this.color = SHAPE_COLORS[this.key] || '#A0643C';
-
+        this.color = SHAPE_COLORS[this.key] || '#A0643C';
         this.normalize(this.shape);
     }
 
@@ -102,7 +100,7 @@ class Piece {
     containsPoint(mx, my) {
         const scale = this.getCurrentScale();
         const drawSize = CELL_SIZE * scale;
-        const buffer = 10; 
+        const buffer = 15; // Tăng hitbox lên một chút để dễ chạm
 
         for (let cell of this.shape) {
             const px = this.x + cell.c * drawSize;
@@ -185,7 +183,7 @@ class Piece {
 
 let pieces = [];
 let draggingPiece = null;
-let lastSelectedPiece = null; // Lưu khối cuối cùng chạm vào để xoay
+let lastSelectedPiece = null; 
 let dragOffset = { x: 0, y: 0 };
 
 function initGame() {
@@ -193,17 +191,14 @@ function initGame() {
     
     // Nút điều khiển
     document.getElementById('btnRotate').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         rotateCurrentPiece();
     });
     document.getElementById('btnFlip').addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         flipCurrentPiece();
     });
     
-    // Fix lỗi không hiển thị: Vẽ ngay lập tức sau khi init
     draw(); 
 }
 
@@ -211,8 +206,6 @@ function rotateCurrentPiece() {
     let target = draggingPiece || lastSelectedPiece;
     if (target) {
         target.rotate();
-        // Nếu đang trên bảng, xoay xong có thể bị chồng lấn -> Kệ cho người dùng tự sửa
-        // hoặc logic phức tạp hơn là check va chạm. Ở đây ta cho phép xoay tự do.
         draw();
     }
 }
@@ -233,19 +226,19 @@ function resizeCanvas() {
     canvas.height = h;
 
     // Tính toán kích thước
-    // Cần chỗ cho: Bảng (9 dòng) + Khay chứa (ước tính 8 dòng)
-    const totalRowsNeeded = BOARD_ROWS + 8; 
+    // Bảng 9 dòng + Khay chứa. Do đã bỏ 5 khối nhỏ, khay chứa gọn hơn.
+    // Ước tính khay chỉ cần khoảng 5-6 dòng khối.
+    const totalRowsNeeded = BOARD_ROWS + 6; 
     
     const sizeByHeight = h / (totalRowsNeeded + 1);
     const sizeByWidth = (w - 20) / BOARD_COLS; 
     
     CELL_SIZE = Math.min(sizeByHeight, sizeByWidth);
-    if (CELL_SIZE < 22) CELL_SIZE = 22; // Bé nhất có thể để vừa màn hình nhỏ
+    // Cố gắng giữ CELL_SIZE đủ lớn
+    if (CELL_SIZE < 25) CELL_SIZE = 25; 
 
     MARGIN_X = (w - (BOARD_COLS * CELL_SIZE)) / 2;
-    // Đẩy bảng xuống một chút để tránh bị nút bấm che (nếu nút bấm nằm đè)
-    // Nhưng vì nút bấm ở góc phải, bảng canh giữa nên thường không sao.
-    MARGIN_Y = 50; 
+    MARGIN_Y = 60; // Dành chỗ cho nút bấm floating ở trên
 
     createPiecesLayout();
 }
@@ -255,27 +248,14 @@ function createPiecesLayout() {
     const keys = Object.keys(SHAPES);
     
     // Khay bắt đầu ngay dưới bảng
-    const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 20; 
+    const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 30; 
     let currentX = 15;
     let currentY = startTrayY;
     let rowMaxH = 0;
     
     const trayCellSize = CELL_SIZE * TRAY_SCALE;
-
-    // Ưu tiên khối nhỏ lên đầu
-    const smallKeys = ['S1', 'S2', 'S3', 'S4', 'S5'];
-    smallKeys.forEach(key => {
-        pieces.push(new Piece(key, currentX, currentY));
-        currentX += (trayCellSize * 1.5) + TRAY_GAP; 
-    });
-
-    currentY += (trayCellSize * 1.5) + TRAY_GAP;
-    currentX = 15;
     
-    // Các khối còn lại
     keys.forEach((key) => {
-        if(key.startsWith('S')) return; 
-
         let tempShape = SHAPES[key];
         let pWidth = (Math.max(...tempShape.map(c=>c.c)) + 1) * trayCellSize;
         let pHeight = (Math.max(...tempShape.map(c=>c.r)) + 1) * trayCellSize;
@@ -343,7 +323,6 @@ function getEventPos(e) {
 }
 
 function handleStart(e) {
-    // Quan trọng: Chỉ preventDefault trên canvas
     if(e.target === canvas) e.preventDefault();
     
     const pos = getEventPos(e);
@@ -353,13 +332,10 @@ function handleStart(e) {
         if (pieces[i].containsPoint(pos.x, pos.y)) {
             draggingPiece = pieces[i];
             draggingPiece.isDragging = true;
-            lastSelectedPiece = draggingPiece; // Lưu lại để xoay/lật
-            
-            // Lưu trạng thái cũ nếu cần (logic Undo), hiện tại reset gridPos
+            lastSelectedPiece = draggingPiece;
             draggingPiece.gridPos = null; 
             
-            // Tính offset sao cho ngón tay nằm giữa khối
-            // Không nhấc lên quá cao để tránh cảm giác bị trôi
+            // Giữ nguyên offset cầm nắm => không bị giật
             dragOffset.x = pos.x - draggingPiece.x;
             dragOffset.y = pos.y - draggingPiece.y;
             
@@ -376,9 +352,7 @@ function handleMove(e) {
         const pos = getEventPos(e);
         draggingPiece.x = pos.x - dragOffset.x;
         draggingPiece.y = pos.y - dragOffset.y;
-        
-        // Vẽ lại ngay lập tức -> MƯỢT
-        draw(); 
+        draw(); // Vẽ realtime
     }
 }
 
@@ -393,7 +367,7 @@ function handleEnd(e) {
     }
 }
 
-// Sự kiện
+// Event Listeners
 canvas.addEventListener('mousedown', handleStart);
 canvas.addEventListener('mousemove', handleMove);
 canvas.addEventListener('mouseup', handleEnd);
@@ -401,16 +375,13 @@ canvas.addEventListener('touchstart', handleStart, { passive: false });
 canvas.addEventListener('touchmove', handleMove, { passive: false });
 canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-// Resize
 window.addEventListener('resize', () => {
     resizeCanvas();
     draw();
 });
 
-// Chạy game ngay lập tức khi load script
+// Chạy game
 initGame();
-
-// Phòng hờ trường hợp ảnh/font chưa load kịp
 window.onload = function() {
     resizeCanvas();
     draw();
