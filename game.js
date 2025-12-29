@@ -4,29 +4,15 @@ const ctx = canvas.getContext('2d');
 // --- CẤU HÌNH ---
 const BOARD_ROWS = 10;
 const BOARD_COLS = 7;
-let CELL_SIZE = 30; // Kích thước chuẩn trên bảng
-const TRAY_SCALE = 0.6; // Tỷ lệ thu nhỏ khi ở trong khay (60%)
+let CELL_SIZE = 30; 
+
+// Tỷ lệ thu nhỏ trong khay (Nhỏ hơn chút để tiết kiệm diện tích)
+const TRAY_SCALE = 0.55; 
+// Khoảng cách giữa các khối trong khay (Tăng lên để tránh bấm nhầm)
+const TRAY_GAP = 35; 
 
 let MARGIN_X = 20;
 let MARGIN_Y = 20;
-
-// Bảng màu riêng cho từng khối (Màu Pastel dễ nhìn + Viền đậm)
-const SHAPE_COLORS = {
-    'F': '#EF476F', // Hồng đậm
-    'I': '#118AB2', // Xanh dương
-    'L': '#FFD166', // Vàng
-    'P': '#06D6A0', // Xanh ngọc
-    'N': '#8338EC', // Tím
-    'T': '#FB5607', // Cam đỏ
-    'U': '#3A86FF', // Xanh biển
-    'V': '#FF006E', // Hồng neon
-    'W': '#8D99AE', // Xám xanh
-    'X': '#E9C46A', // Vàng đất
-    'Y': '#F4A261', // Cam đất
-    'Z': '#2A9D8F', // Xanh cổ vịt
-    // Màu cho khối vuông nhỏ
-    'S': '#A0643C'  // Màu gỗ
-};
 
 const COLORS = {
     BG: '#F0E6D2',
@@ -36,6 +22,13 @@ const COLORS = {
     TEXT_RED: '#C83232',
     HIGHLIGHT: 'rgba(255, 255, 255, 0.5)',
     BLOCKED: '#E0D0B0'
+};
+
+const SHAPE_COLORS = {
+    'F': '#EF476F', 'I': '#118AB2', 'L': '#FFD166', 'P': '#06D6A0',
+    'N': '#8338EC', 'T': '#FB5607', 'U': '#3A86FF', 'V': '#FF006E',
+    'W': '#8D99AE', 'X': '#E9C46A', 'Y': '#F4A261', 'Z': '#2A9D8F',
+    'S': '#8B4513' // Màu nâu gỗ đậm cho khối nhỏ
 };
 
 const BOARD_CONTENT = [
@@ -52,6 +45,7 @@ const BOARD_CONTENT = [
 ];
 
 const SHAPES = {
+    // Các khối lớn
     'F': [{r:1,c:0}, {r:1,c:1}, {r:0,c:1}, {r:0,c:2}, {r:2,c:1}],
     'I': [{r:0,c:0}, {r:1,c:0}, {r:2,c:0}, {r:3,c:0}, {r:4,c:0}],
     'L': [{r:0,c:0}, {r:1,c:0}, {r:2,c:0}, {r:3,c:0}, {r:3,c:1}],
@@ -64,6 +58,7 @@ const SHAPES = {
     'X': [{r:0,c:1}, {r:1,c:0}, {r:1,c:1}, {r:1,c:2}, {r:2,c:1}],
     'Y': [{r:0,c:1}, {r:1,c:0}, {r:1,c:1}, {r:1,c:2}, {r:1,c:3}],
     'Z': [{r:0,c:0}, {r:0,c:1}, {r:1,c:1}, {r:2,c:1}, {r:2,c:2}],
+    // Các khối nhỏ
     'S1':[{r:0,c:0}], 'S2':[{r:0,c:0}], 'S3':[{r:0,c:0}], 'S4':[{r:0,c:0}], 'S5':[{r:0,c:0}]
 };
 
@@ -74,20 +69,16 @@ class Piece {
         this.x = startX;
         this.y = startY;
         this.initialPos = { x: startX, y: startY };
-        this.gridPos = null; // null = đang ở khay/trên tay, {r,c} = đang ở bảng
+        this.gridPos = null; 
         this.isDragging = false;
         
-        // Xác định màu
         if (this.key.startsWith('S')) this.color = SHAPE_COLORS['S'];
         else this.color = SHAPE_COLORS[this.key] || '#A0643C';
 
         this.normalize(this.shape);
     }
 
-    // Lấy tỷ lệ hiển thị hiện tại (To hay Nhỏ)
     getCurrentScale() {
-        // Nếu đang kéo HOẶC đang nằm trên bảng -> Kích thước thật (1.0)
-        // Nếu đang nằm trong khay -> Thu nhỏ (TRAY_SCALE)
         if (this.isDragging || this.gridPos !== null) {
             return 1.0;
         }
@@ -99,9 +90,9 @@ class Piece {
         const drawSize = CELL_SIZE * scale;
         
         ctx.fillStyle = this.color;
-        ctx.strokeStyle = '#333'; // Viền đen đậm để phân biệt
-        ctx.lineWidth = 2; // Viền dày hơn
-        ctx.lineJoin = 'round'; // Bo góc viền cho mềm mại
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = 'round';
 
         this.shape.forEach(cell => {
             const px = this.x + cell.c * drawSize;
@@ -110,18 +101,18 @@ class Piece {
             ctx.fillRect(px, py, drawSize, drawSize);
             ctx.strokeRect(px, py, drawSize, drawSize);
             
-            // Highlight nhẹ 3D
             ctx.fillStyle = COLORS.HIGHLIGHT;
             ctx.fillRect(px + 2, py + 2, drawSize - 4, drawSize * 0.3);
-            ctx.fillStyle = this.color; // Reset màu
+            ctx.fillStyle = this.color; 
         });
     }
 
     containsPoint(mx, my) {
         const scale = this.getCurrentScale();
         const drawSize = CELL_SIZE * scale;
-        // Tăng vùng nhận diện chạm (buffer) lên 20px để dễ bấm trên điện thoại
-        const buffer = 20; 
+        // Buffer nhỏ lại chút (10px) để tránh dính khối bên cạnh
+        // Nhưng vẫn đủ để ngón tay chạm được
+        const buffer = 10; 
 
         for (let cell of this.shape) {
             const px = this.x + cell.c * drawSize;
@@ -152,8 +143,6 @@ class Piece {
     }
 
     snapToGrid(otherPieces) {
-        // Nếu thả ra mà không phải vị trí hợp lệ trên bảng -> Về Khay
-        
         const col = Math.round((this.x - MARGIN_X) / CELL_SIZE);
         const row = Math.round((this.y - MARGIN_Y) / CELL_SIZE);
         
@@ -164,12 +153,10 @@ class Piece {
             const gridR = row + cell.r;
             const gridC = col + cell.c;
             
-            // 1. Check biên bảng
             if (gridR < 0 || gridR >= BOARD_ROWS || gridC < 0 || gridC >= BOARD_COLS) {
                 validPosition = false;
                 break;
             }
-            // 2. Check ô BLOCK
             if (BOARD_CONTENT[gridR][gridC] === "BLOCK") {
                 validPosition = false;
                 break;
@@ -177,7 +164,6 @@ class Piece {
             potentialCells.push(`${gridR},${gridC}`);
         }
 
-        // 3. Check đè lên khối khác
         if (validPosition) {
             for (let other of otherPieces) {
                 if (other === this || !other.gridPos) continue;
@@ -194,12 +180,10 @@ class Piece {
         }
 
         if (validPosition) {
-            // SNAP VÀO BẢNG
             this.x = MARGIN_X + col * CELL_SIZE;
             this.y = MARGIN_Y + row * CELL_SIZE;
             this.gridPos = { r: row, c: col };
         } else {
-            // TRẢ VỀ KHAY (Đưa ra khỏi bảng)
             this.returnToTray();
         }
     }
@@ -208,7 +192,6 @@ class Piece {
         this.x = this.initialPos.x;
         this.y = this.initialPos.y;
         this.gridPos = null; 
-        // Khi gridPos = null, hàm draw() sẽ tự động dùng TRAY_SCALE
     }
 }
 
@@ -216,11 +199,9 @@ let pieces = [];
 let draggingPiece = null;
 let dragOffset = { x: 0, y: 0 };
 
-// --- HÀM KHỞI TẠO ---
 function initGame() {
     resizeCanvas();
     
-    // Nút điều khiển
     document.getElementById('btnRotate').addEventListener('click', () => {
         if (draggingPiece) draggingPiece.rotate();
         else if (pieces.length > 0) getLastInteractedPiece().rotate();
@@ -236,7 +217,6 @@ function initGame() {
 }
 
 function getLastInteractedPiece() {
-    // Ưu tiên xoay khối đang cầm hoặc khối vừa đặt
     let loosePieces = pieces.filter(p => p.gridPos === null);
     if(loosePieces.length > 0) return loosePieces[loosePieces.length - 1];
     return pieces[pieces.length - 1];
@@ -250,17 +230,21 @@ function resizeCanvas() {
     canvas.width = w;
     canvas.height = h;
 
-    // Tính kích thước: Bảng + Khay
-    // Khay bây giờ chứa các khối nhỏ hơn, nên sẽ tiết kiệm diện tích hơn
-    const totalRowsNeeded = BOARD_ROWS + 6; 
+    // Tính toán không gian cực kỳ cẩn thận
+    // BOARD_ROWS (10) + Khoảng 8 dòng cho khay để chắc chắn đủ chỗ
+    const totalRowsNeeded = BOARD_ROWS + 8.5; 
     
     const sizeByHeight = h / (totalRowsNeeded + 1);
     const sizeByWidth = (w - 20) / BOARD_COLS; 
     
     CELL_SIZE = Math.min(sizeByHeight, sizeByWidth);
     
+    // Đảm bảo không quá nhỏ
+    if (CELL_SIZE < 25) CELL_SIZE = 25;
+
     MARGIN_X = (w - (BOARD_COLS * CELL_SIZE)) / 2;
-    MARGIN_Y = 20; 
+    if(MARGIN_X < 5) MARGIN_X = 5;
+    MARGIN_Y = 15; 
 
     createPiecesLayout();
 }
@@ -269,55 +253,58 @@ function createPiecesLayout() {
     pieces = [];
     const keys = Object.keys(SHAPES);
     
-    // 1. Tạo 5 khối vuông nhỏ (Luôn nằm trên bảng ban đầu)
-    for(let i=1; i<=5; i++) {
-        let key = `S${i}`;
-        let col = i; 
-        let row = 9; 
-        let pX = MARGIN_X + col * CELL_SIZE;
-        let pY = MARGIN_Y + row * CELL_SIZE;
-        
-        let piece = new Piece(key, pX, pY);
-        piece.gridPos = {r: row, c: col}; 
-        pieces.push(piece);
-    }
-
-    // 2. Tạo 12 khối Pentomino (Ở khay - KÍCH THƯỚC NHỎ)
-    const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 30; 
-    let currentX = 20;
+    // Bắt đầu vẽ khay ngay dưới bảng
+    const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 25; 
+    let currentX = 15;
     let currentY = startTrayY;
     let rowMaxH = 0;
     
-    // Kích thước ô trong khay dùng scale nhỏ
     const trayCellSize = CELL_SIZE * TRAY_SCALE;
 
+    // --- BƯỚC 1: XẾP 5 KHỐI NHỎ TRƯỚC (Hàng đầu tiên) ---
+    // Để chúng nằm riêng 1 hàng cho dễ lấy, không bị lẫn
+    const smallKeys = ['S1', 'S2', 'S3', 'S4', 'S5'];
+    
+    smallKeys.forEach(key => {
+        let p = new Piece(key, currentX, currentY);
+        // S1-S5 giờ sẽ có gridPos = null => Scale nhỏ
+        pieces.push(p);
+        
+        // Dịch sang phải
+        currentX += (trayCellSize * 1.5) + TRAY_GAP; 
+    });
+
+    // Xuống dòng sau khi xếp xong khối nhỏ
+    currentY += (trayCellSize * 1.5) + TRAY_GAP;
+    currentX = 15;
+    
+    // --- BƯỚC 2: XẾP CÁC KHỐI LỚN ---
     keys.forEach((key) => {
-        if(key.startsWith('S')) return; 
+        if(key.startsWith('S')) return; // Bỏ qua S1-S5 đã làm ở trên
 
         let tempShape = SHAPES[key];
-        // Tính kích thước thật theo scale khay
         let pWidth = (Math.max(...tempShape.map(c=>c.c)) + 1) * trayCellSize;
         let pHeight = (Math.max(...tempShape.map(c=>c.r)) + 1) * trayCellSize;
 
-        if (currentX + pWidth > canvas.width - 10) {
-            currentX = 20;
-            currentY += rowMaxH + 15; // Giãn dòng
+        // Check xem có bị tràn màn hình ngang không
+        if (currentX + pWidth > canvas.width - 5) {
+            currentX = 15;
+            currentY += rowMaxH + TRAY_GAP; // Xuống dòng + khoảng cách lớn
             rowMaxH = 0;
         }
 
         pieces.push(new Piece(key, currentX, currentY));
         
-        currentX += pWidth + 25; // Khoảng cách giữa các khối rộng hơn chút cho dễ nhìn
+        // Tăng khoảng cách X lên để tránh dính
+        currentX += pWidth + TRAY_GAP; 
         if (pHeight > rowMaxH) rowMaxH = pHeight;
     });
 }
 
-// --- VẼ ---
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBoard();
     
-    // Vẽ các khối: Vẽ khối trong khay trước, khối đang kéo vẽ sau cùng
     pieces.sort((a, b) => {
         if (a === draggingPiece) return 1;
         if (b === draggingPiece) return -1;
@@ -339,10 +326,7 @@ function drawBoard() {
 
             const content = BOARD_CONTENT[r][c];
 
-            if (content === "BLOCK") {
-                // Ô bị khóa, không vẽ gì hoặc vẽ mờ
-                continue; 
-            }
+            if (content === "BLOCK") continue; 
 
             ctx.fillStyle = COLORS.BOARD;
             ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
@@ -359,12 +343,6 @@ function drawBoard() {
     }
 }
 
-function gameLoop() {
-    draw();
-    window.requestAnimationFrame(gameLoop);
-}
-
-// --- XỬ LÝ CHẠM / CHUỘT ---
 function getEventPos(e) {
     if (e.touches && e.touches.length > 0) {
         return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -377,29 +355,19 @@ function handleStart(e) {
     if(e.target == canvas) e.preventDefault(); 
     const pos = getEventPos(e);
     
-    // Duyệt ngược để ưu tiên khối nằm trên (nếu xếp chồng trong khay)
+    // Check từ trên xuống dưới
     for (let i = pieces.length - 1; i >= 0; i--) {
         if (pieces[i].containsPoint(pos.x, pos.y)) {
             draggingPiece = pieces[i];
             draggingPiece.isDragging = true;
-            
-            // Nếu đang trên bảng thì lưu vị trí cũ (phòng khi muốn undo logic, nhưng giờ ta dùng returnTray)
-            // Logic mới: Nếu nhấc lên, coi như nó đã rời khỏi grid
             draggingPiece.gridPos = null; 
             
-            // TÍNH OFFSET:
-            // Quan trọng: Khi nhấc lên, khối sẽ to ra (Scale 1.0). 
-            // Cần tính lại offset dựa trên kích thước thật để không bị giật.
-            // Tuy nhiên để đơn giản và tạo cảm giác "nhấc lên", ta dời vị trí khối lên trên ngón tay một chút
-            // để ngón tay không che mất khối.
-            
-            // Chuyển vị trí khối về ngay tâm ngón tay (hoặc cao hơn chút)
-            draggingPiece.x = pos.x - (CELL_SIZE * 1.5); // Căn giữa tương đối
-            draggingPiece.y = pos.y - (CELL_SIZE * 1.5) - 50; // Cao hơn ngón tay 50px
+            // Kéo khối lên cao hơn ngón tay 1 chút để nhìn rõ
+            draggingPiece.x = pos.x - (CELL_SIZE * 0.5); 
+            draggingPiece.y = pos.y - (CELL_SIZE * 1.5); 
             
             dragOffset.x = pos.x - draggingPiece.x;
             dragOffset.y = pos.y - draggingPiece.y;
-            
             break;
         }
     }
