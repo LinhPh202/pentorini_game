@@ -1,72 +1,62 @@
-/* Reset mặc định */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    /* Ngăn chặn hành vi chọn văn bản hoặc zoom khi chạm nhanh */
-    touch-action: none; 
+    touch-action: none; /* Chặn chạm mặc định */
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    /* Ngăn chặn kéo để refresh trên một số trình duyệt mobile */
-    overscroll-behavior-y: contain;
+    overscroll-behavior: none; /* Chặn kéo nảy trang */
 }
 
 body {
-    background-color: #F0E6D2; /* Màu kem nền */
+    background-color: #F0E6D2;
     display: flex;
-    flex-direction: column; /* Sắp xếp theo chiều dọc */
-    height: 100vh; /* Chiều cao 100% màn hình */
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
     font-family: sans-serif;
-    overflow: hidden; /* Ẩn thanh cuộn */
+    overflow: hidden;
 }
 
-/* Khu vực điều khiển phía trên */
-.top-controls-area {
+/* Thanh nút bấm mỏng ở trên cùng */
+.control-bar {
     width: 100%;
-    padding: 8px;
+    height: 50px; /* Cố định chiều cao nhỏ */
     background-color: #e4d8c0;
-    text-align: center;
     border-bottom: 2px solid #d0c0a0;
-    flex-shrink: 0; /* Không bị co lại */
-    z-index: 10; /* Nằm trên canvas nếu có chồng lấn */
-}
-
-.instructions {
-    font-size: 13px; /* Chữ nhỏ hơn chút để tiết kiệm chỗ */
-    color: #50463c;
-    margin-bottom: 5px;
-    line-height: 1.2;
-}
-
-.buttons {
     display: flex;
-    justify-content: center;
-    gap: 15px;
+    align-items: center;
+    justify-content: space-between; /* Đẩy 2 nút sang 2 bên hoặc giữa */
+    padding: 0 20px;
+    z-index: 10;
+}
+
+.spacer {
+    flex-grow: 1; /* Đẩy 2 nút ra xa nhau nếu cần, hoặc bỏ đi để gom giữa */
 }
 
 button {
-    padding: 8px 16px; /* Nút gọn hơn */
+    height: 36px;
+    padding: 0 20px;
     font-size: 14px;
     border: none;
     border-radius: 6px;
     background-color: #A0643C;
     color: white;
     font-weight: bold;
-    cursor: pointer;
     box-shadow: 0 3px #7a4a2a;
 }
 
 button:active {
     background-color: #8a5432;
-    box-shadow: 0 1px #7a4a2a;
     transform: translateY(2px);
+    box-shadow: 0 1px #7a4a2a;
 }
 
-/* Canvas chiếm phần không gian còn lại */
 canvas {
     display: block;
     background-color: #F0E6D2;
-    flex-grow: 1; /* Tự động lấp đầy chiều cao còn lại */
-    touch-action: none; /* Quan trọng: ngăn trình duyệt xử lý sự kiện chạm */
+    flex-grow: 1; /* Chiếm toàn bộ phần còn lại */
+    width: 100%;
 }
