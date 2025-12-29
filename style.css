@@ -2,61 +2,54 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    touch-action: none; /* Chặn chạm mặc định */
+    /* Ngăn chặn mọi hành vi chạm mặc định của trình duyệt */
+    touch-action: none; 
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    overscroll-behavior: none; /* Chặn kéo nảy trang */
+    overscroll-behavior: none;
 }
 
 body {
     background-color: #F0E6D2;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
     width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* Cấm cuộn tuyệt đối */
     font-family: sans-serif;
-    overflow: hidden;
-}
-
-/* Thanh nút bấm mỏng ở trên cùng */
-.control-bar {
-    width: 100%;
-    height: 50px; /* Cố định chiều cao nhỏ */
-    background-color: #e4d8c0;
-    border-bottom: 2px solid #d0c0a0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Đẩy 2 nút sang 2 bên hoặc giữa */
-    padding: 0 20px;
-    z-index: 10;
-}
-
-.spacer {
-    flex-grow: 1; /* Đẩy 2 nút ra xa nhau nếu cần, hoặc bỏ đi để gom giữa */
-}
-
-button {
-    height: 36px;
-    padding: 0 20px;
-    font-size: 14px;
-    border: none;
-    border-radius: 6px;
-    background-color: #A0643C;
-    color: white;
-    font-weight: bold;
-    box-shadow: 0 3px #7a4a2a;
-}
-
-button:active {
-    background-color: #8a5432;
-    transform: translateY(2px);
-    box-shadow: 0 1px #7a4a2a;
+    position: relative; /* Để định vị nút bấm */
 }
 
 canvas {
     display: block;
-    background-color: #F0E6D2;
-    flex-grow: 1; /* Chiếm toàn bộ phần còn lại */
     width: 100%;
+    height: 100%;
+    background-color: #F0E6D2;
+}
+
+/* Container cho nút bấm trôi nổi */
+.floating-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px; /* Đặt góc phải để không che bảng (thường bảng canh giữa) */
+    display: flex;
+    gap: 10px;
+    z-index: 100; /* Luôn nằm trên canvas */
+}
+
+button {
+    height: 40px;
+    padding: 0 15px;
+    font-size: 14px;
+    border: none;
+    border-radius: 20px; /* Bo tròn nhìn mềm mại hơn */
+    background-color: rgba(160, 100, 60, 0.9); /* Màu bán trong suốt */
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    backdrop-filter: blur(4px);
+}
+
+button:active {
+    background-color: #8a5432;
+    transform: scale(0.95);
 }
