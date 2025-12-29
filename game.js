@@ -1,17 +1,17 @@
+// game.js - Cập nhật logic chạm để hỗ trợ Scroll
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- CẤU HÌNH ---
 const BOARD_ROWS = 9; 
 const BOARD_COLS = 7;
-let CELL_SIZE = 35; // Kích thước mặc định, sẽ được tính lại theo chiều ngang
+let CELL_SIZE = 35; 
 
-// Tỷ lệ trong khay (tray)
-const TRAY_SCALE = 0.45; // Tăng lên xíu vì giờ có thể cuộn
+const TRAY_SCALE = 0.45; 
 const TRAY_GAP = 12; 
 
 let MARGIN_X = 10;
-let MARGIN_Y = 70; // Chừa chỗ nút bấm
+let MARGIN_Y = 70; 
 
 const COLORS = {
     BG: '#F0E6D2', BOARD: '#FFFAF0', GRID: '#C8BEAA',
@@ -166,7 +166,6 @@ let lastSelectedPiece = null;
 let dragOffset = { x: 0, y: 0 };
 
 function initGame() {
-    // Gọi resize lần đầu sẽ tự động tạo layout và tính chiều cao
     resizeCanvas();
     
     document.getElementById('btnRotate').addEventListener('click', (e) => {
@@ -199,16 +198,11 @@ function flipCurrentPiece() {
     if (target) { target.flip(); draw(); }
 }
 
-// --- LOGIC MỚI: TÍNH TOÁN CHIỀU CAO ĐỘNG ---
 function resizeCanvas() {
     const w = window.innerWidth;
-    // Đặt chiều rộng canvas bằng màn hình
     canvas.width = w;
 
-    // 1. Tính CELL_SIZE dựa trên chiều ngang cho vừa mắt
-    // Chia màn hình cho khoảng 8 ô là đẹp
     CELL_SIZE = Math.floor((w - 20) / 8); 
-    // Giới hạn kích thước cho hợp lý
     if (CELL_SIZE < 32) CELL_SIZE = 32;
     if (CELL_SIZE > 50) CELL_SIZE = 50;
 
@@ -216,22 +210,16 @@ function resizeCanvas() {
     if (MARGIN_X < 5) MARGIN_X = 5;
     MARGIN_Y = 70; 
 
-    // 2. Tạo layout và lấy về chiều cao cần thiết tối đa
     const requiredHeight = createPiecesLayout();
-
-    // 3. Đặt chiều cao cho canvas. Nếu cao hơn màn hình, trình duyệt sẽ cho cuộn.
-    // Thêm 50px margin dưới cùng cho thoáng
-    canvas.height = requiredHeight + 50;
+    // Thêm khoảng trống 100px ở dưới cùng để dễ cuộn
+    canvas.height = requiredHeight + 100;
     
-    // Vẽ lại sau khi đổi kích thước
     draw();
 }
 
-// Hàm này giờ sẽ trả về vị trí Y thấp nhất (đáy của khay chứa)
 function createPiecesLayout() {
     pieces = [];
     const keys = Object.keys(SHAPES);
-    
     const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 30; 
     
     let currentX = 15;
@@ -268,7 +256,6 @@ function createPiecesLayout() {
         if (pHeight > rowMaxH) rowMaxH = pHeight;
     });
 
-    // Trả về vị trí Y cuối cùng + chiều cao hàng cuối
     return currentY + rowMaxH;
 }
 
@@ -306,15 +293,10 @@ function drawBoard() {
     }
 }
 
-// Lấy tọa độ sự kiện trên trang (vì giờ canvas có thể cuộn)
 function getEventPos(e) {
-    // Khi trang cuộn, clientY không đổi, nhưng vị trí trên canvas thay đổi
-    // Cần cộng thêm phần đã cuộn (window.scrollY) và trừ đi vị trí canvas
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    // rect.top đã bao gồm việc cuộn, nên công thức cũ vẫn đúng
     return {
         x: clientX - rect.left,
         y: clientY - rect.top
@@ -322,15 +304,13 @@ function getEventPos(e) {
 }
 
 function handleStart(e) {
-    // Chỉ preventDefault nếu chạm vào khối gỗ để kéo
-    // Nếu chạm vào vùng trống thì KHÔNG preventDefault để cho phép cuộn trang
-    
     const pos = getEventPos(e);
-    let touchedPiece = false;
-
+    
+    // Kiểm tra xem có chạm vào khối nào không
     for (let i = pieces.length - 1; i >= 0; i--) {
         if (pieces[i].containsPoint(pos.x, pos.y)) {
-            if(e.target === canvas) e.preventDefault(); // Chặn cuộn khi bắt đầu kéo khối
+            // QUAN TRỌNG: Chỉ chặn sự kiện mặc định (cuộn) khi chạm trúng khối
+            if(e.target === canvas) e.preventDefault();
 
             draggingPiece = pieces[i];
             draggingPiece.isDragging = true;
@@ -338,19 +318,19 @@ function handleStart(e) {
             draggingPiece.gridPos = null; 
             dragOffset.x = pos.x - draggingPiece.x;
             dragOffset.y = pos.y - draggingPiece.y;
-            touchedPiece = true;
             draw();
-            break;
+            return; // Tìm thấy khối thì thoát luôn
         }
     }
     
-    // Nếu không chạm vào khối nào, và chạm trên canvas, thì cho phép cuộn (không e.preventDefault)
+    // Nếu code chạy đến đây nghĩa là chạm vào vùng trống -> Không gọi preventDefault -> Trình duyệt sẽ tự cuộn trang
 }
 
 function handleMove(e) {
-    // Chỉ chặn cuộn khi đang thực sự kéo một khối
     if (draggingPiece) {
+        // Đang kéo khối thì phải chặn cuộn
         if(e.target === canvas) e.preventDefault();
+        
         const pos = getEventPos(e);
         draggingPiece.x = pos.x - dragOffset.x;
         draggingPiece.y = pos.y - dragOffset.y;
@@ -375,11 +355,7 @@ canvas.addEventListener('touchstart', handleStart, { passive: false });
 canvas.addEventListener('touchmove', handleMove, { passive: false });
 canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-// Sử dụng sự kiện orientationchange để xử lý xoay màn hình tốt hơn trên mobile
-window.addEventListener('orientationchange', () => {
-    // Chờ một chút để trình duyệt cập nhật kích thước mới
-    setTimeout(resizeCanvas, 200);
-});
+window.addEventListener('orientationchange', () => { setTimeout(resizeCanvas, 200); });
 window.addEventListener('resize', resizeCanvas);
 
 initGame();
