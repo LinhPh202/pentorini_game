@@ -1,0 +1,21 @@
+{
+  "name": "Pentorini Puzzle",
+  "short_name": "Pentorini",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F0E6D2",
+  "theme_color": "#A0643C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
