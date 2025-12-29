@@ -7,17 +7,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <canvas id="gameCanvas"></canvas>
-        
-        <div class="controls-area">
-            <p class="instructions">Kéo thả để che kín bảng. Chỉ chừa lại Thứ, Ngày, Tháng hiện tại.</p>
-            <div class="buttons">
-                <button id="btnRotate">🔄 Xoay (R)</button>
-                <button id="btnFlip">↔️ Lật (F)</button>
-            </div>
+    <div class="top-controls-area">
+        <p class="instructions">Kéo thả để che kín bảng. Chừa lại Thứ, Ngày, Tháng hiện tại.</p>
+        <div class="buttons">
+            <button id="btnRotate">🔄 Xoay (R)</button>
+            <button id="btnFlip">↔️ Lật (F)</button>
         </div>
     </div>
+
+    <canvas id="gameCanvas"></canvas>
 
     <script src="game.js"></script>
 </body>
