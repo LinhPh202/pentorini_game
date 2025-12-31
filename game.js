@@ -1,4 +1,3 @@
-// game.js - Cập nhật logic chạm để hỗ trợ Scroll
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -11,17 +10,31 @@ const TRAY_SCALE = 0.45;
 const TRAY_GAP = 12; 
 
 let MARGIN_X = 10;
-let MARGIN_Y = 70; 
+// Tăng Margin Y lên để tránh bị nút che (do header mới)
+let MARGIN_Y = 80; 
+
+// Trạng thái chế độ mù màu
+let isColorBlindMode = false;
 
 const COLORS = {
     BG: '#F0E6D2', BOARD: '#FFFAF0', GRID: '#C8BEAA',
-    TEXT: '#50463C', TEXT_RED: '#C83232', HIGHLIGHT: 'rgba(255, 255, 255, 0.5)',
+    TEXT: '#50463C', TEXT_RED: '#C83232', HIGHLIGHT: 'rgba(255, 255, 255, 0.4)',
 };
 
+// BẢNG MÀU MỚI: Tương phản cao, dễ phân biệt hơn
 const SHAPE_COLORS = {
-    'F': '#EF476F', 'I': '#118AB2', 'L': '#FFD166', 'P': '#06D6A0',
-    'N': '#8338EC', 'T': '#FB5607', 'U': '#3A86FF', 'V': '#FF006E',
-    'W': '#8D99AE', 'X': '#E9C46A', 'Y': '#F4A261', 'Z': '#2A9D8F'
+    'F': '#DC143C', // Đỏ thẫm
+    'I': '#00BFFF', // Xanh dương nhạt (Deep Sky Blue)
+    'L': '#FF8C00', // Cam đậm
+    'P': '#FFD700', // Vàng
+    'N': '#32CD32', // Xanh lá mạ
+    'T': '#9400D3', // Tím đậm
+    'U': '#4169E1', // Xanh hoàng gia
+    'V': '#FF1493', // Hồng đậm
+    'W': '#008080', // Xanh cổ vịt (Teal) - Khác hẳn xanh dương
+    'X': '#808080', // Xám - Trung tính
+    'Y': '#8B4513', // Nâu đất
+    'Z': '#2E8B57'  // Xanh biển (Sea Green) - Khác xanh lá mạ
 };
 
 const BOARD_CONTENT = [
@@ -72,18 +85,50 @@ class Piece {
     draw() {
         const scale = this.getCurrentScale();
         const drawSize = CELL_SIZE * scale;
-        ctx.fillStyle = this.color;
+        
         ctx.strokeStyle = '#222';
         ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
+
+        // Cài đặt font cho chế độ mù màu
+        if (isColorBlindMode) {
+            ctx.font = `bold ${drawSize * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+        }
+
         this.shape.forEach(cell => {
             const px = this.x + cell.c * drawSize;
             const py = this.y + cell.r * drawSize;
+            
+            // 1. Vẽ nền
+            ctx.fillStyle = this.color;
             ctx.fillRect(px, py, drawSize, drawSize);
+            
+            // 2. Vẽ viền
             ctx.strokeRect(px, py, drawSize, drawSize);
-            ctx.fillStyle = COLORS.HIGHLIGHT;
-            ctx.fillRect(px + 2, py + 2, drawSize - 4, drawSize * 0.3);
-            ctx.fillStyle = this.color; 
+            
+            // 3. Highlight nhẹ
+            if (!isColorBlindMode) {
+                ctx.fillStyle = COLORS.HIGHLIGHT;
+                ctx.fillRect(px + 2, py + 2, drawSize - 4, drawSize * 0.3);
+            }
+
+            // 4. CHẾ ĐỘ MÙ MÀU: Vẽ ký tự tên khối (F, I, L...)
+            if (isColorBlindMode) {
+                // Vẽ viền chữ màu trắng để nổi trên mọi nền
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3;
+                ctx.strokeText(this.key, px + drawSize/2, py + drawSize/2);
+                
+                // Vẽ lòng chữ màu đen
+                ctx.fillStyle = 'black';
+                ctx.fillText(this.key, px + drawSize/2, py + drawSize/2);
+                
+                // Reset lại stroke style cho ô vuông tiếp theo
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1.5;
+            }
         });
     }
 
@@ -177,8 +222,27 @@ function initGame() {
     document.getElementById('btnReset').addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation(); resetGame();
     });
+    // SỰ KIỆN MỚI: BẬT/TẮT MÙ MÀU
+    document.getElementById('btnColorBlind').addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation(); 
+        toggleColorBlind();
+    });
     
     draw(); 
+}
+
+function toggleColorBlind() {
+    isColorBlindMode = !isColorBlindMode;
+    const btn = document.getElementById('btnColorBlind');
+    // Đổi style nút bấm để biết đang bật hay tắt
+    if(isColorBlindMode) {
+        btn.style.backgroundColor = '#222';
+        btn.style.border = '2px solid white';
+    } else {
+        btn.style.backgroundColor = '#555';
+        btn.style.border = 'none';
+    }
+    draw(); // Vẽ lại toàn bộ
 }
 
 function resetGame() {
@@ -208,10 +272,9 @@ function resizeCanvas() {
 
     MARGIN_X = (w - (BOARD_COLS * CELL_SIZE)) / 2;
     if (MARGIN_X < 5) MARGIN_X = 5;
-    MARGIN_Y = 70; 
+    MARGIN_Y = 80; // Margin lớn hơn cho header
 
     const requiredHeight = createPiecesLayout();
-    // Thêm khoảng trống 100px ở dưới cùng để dễ cuộn
     canvas.height = requiredHeight + 100;
     
     draw();
@@ -305,13 +368,9 @@ function getEventPos(e) {
 
 function handleStart(e) {
     const pos = getEventPos(e);
-    
-    // Kiểm tra xem có chạm vào khối nào không
     for (let i = pieces.length - 1; i >= 0; i--) {
         if (pieces[i].containsPoint(pos.x, pos.y)) {
-            // QUAN TRỌNG: Chỉ chặn sự kiện mặc định (cuộn) khi chạm trúng khối
             if(e.target === canvas) e.preventDefault();
-
             draggingPiece = pieces[i];
             draggingPiece.isDragging = true;
             lastSelectedPiece = draggingPiece;
@@ -319,18 +378,14 @@ function handleStart(e) {
             dragOffset.x = pos.x - draggingPiece.x;
             dragOffset.y = pos.y - draggingPiece.y;
             draw();
-            return; // Tìm thấy khối thì thoát luôn
+            return; 
         }
     }
-    
-    // Nếu code chạy đến đây nghĩa là chạm vào vùng trống -> Không gọi preventDefault -> Trình duyệt sẽ tự cuộn trang
 }
 
 function handleMove(e) {
     if (draggingPiece) {
-        // Đang kéo khối thì phải chặn cuộn
         if(e.target === canvas) e.preventDefault();
-        
         const pos = getEventPos(e);
         draggingPiece.x = pos.x - dragOffset.x;
         draggingPiece.y = pos.y - dragOffset.y;
