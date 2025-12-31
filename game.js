@@ -10,10 +10,8 @@ const TRAY_SCALE = 0.45;
 const TRAY_GAP = 12; 
 
 let MARGIN_X = 10;
-// Tăng Margin Y lên để tránh bị nút che (do header mới)
 let MARGIN_Y = 80; 
 
-// Trạng thái chế độ mù màu
 let isColorBlindMode = false;
 
 const COLORS = {
@@ -21,20 +19,28 @@ const COLORS = {
     TEXT: '#50463C', TEXT_RED: '#C83232', HIGHLIGHT: 'rgba(255, 255, 255, 0.4)',
 };
 
-// BẢNG MÀU MỚI: Tương phản cao, dễ phân biệt hơn
+// Bảng màu tương phản cao
 const SHAPE_COLORS = {
-    'F': '#DC143C', // Đỏ thẫm
-    'I': '#00BFFF', // Xanh dương nhạt (Deep Sky Blue)
-    'L': '#FF8C00', // Cam đậm
-    'P': '#FFD700', // Vàng
-    'N': '#32CD32', // Xanh lá mạ
-    'T': '#9400D3', // Tím đậm
-    'U': '#4169E1', // Xanh hoàng gia
-    'V': '#FF1493', // Hồng đậm
-    'W': '#008080', // Xanh cổ vịt (Teal) - Khác hẳn xanh dương
-    'X': '#808080', // Xám - Trung tính
-    'Y': '#8B4513', // Nâu đất
-    'Z': '#2E8B57'  // Xanh biển (Sea Green) - Khác xanh lá mạ
+    'F': '#DC143C', 'I': '#00BFFF', 'L': '#FF8C00', 'P': '#FFD700',
+    'N': '#32CD32', 'T': '#9400D3', 'U': '#4169E1', 'V': '#FF1493',
+    'W': '#008080', 'X': '#808080', 'Y': '#8B4513', 'Z': '#2E8B57'
+};
+
+// --- MỚI: BẢNG BIỂU TƯỢNG CHO CHẾ ĐỘ MÙ MÀU ---
+// Sử dụng các ký tự hình học đơn giản, dễ nhìn
+const SYMBOL_MAP = {
+    'F': '■', // Hình vuông đặc
+    'I': '●', // Hình tròn đặc
+    'L': '▲', // Tam giác hướng lên
+    'P': '▼', // Tam giác hướng xuống
+    'N': '◆', // Hình thoi đặc
+    'T': '✚', // Dấu cộng đậm
+    'U': '✕', // Dấu nhân đậm
+    'V': '○', // Hình tròn rỗng
+    'W': '□', // Hình vuông rỗng
+    'X': '★', // Ngôi sao
+    'Y': '△', // Tam giác rỗng
+    'Z': '◇'  // Hình thoi rỗng
 };
 
 const BOARD_CONTENT = [
@@ -74,6 +80,7 @@ class Piece {
         this.gridPos = null; 
         this.isDragging = false;
         this.color = SHAPE_COLORS[this.key] || '#A0643C';
+        this.symbol = SYMBOL_MAP[this.key] || '?'; // Lấy biểu tượng
         this.normalize(this.shape);
     }
 
@@ -90,9 +97,10 @@ class Piece {
         ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
 
-        // Cài đặt font cho chế độ mù màu
+        // Cài đặt font cho biểu tượng. Sử dụng font icon hoặc Arial Unicode
         if (isColorBlindMode) {
-            ctx.font = `bold ${drawSize * 0.6}px Arial`;
+            // Kích thước biểu tượng khoảng 70% ô
+            ctx.font = `${drawSize * 0.7}px sans-serif`; 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
         }
@@ -101,31 +109,34 @@ class Piece {
             const px = this.x + cell.c * drawSize;
             const py = this.y + cell.r * drawSize;
             
-            // 1. Vẽ nền
+            // 1. Vẽ nền màu
             ctx.fillStyle = this.color;
             ctx.fillRect(px, py, drawSize, drawSize);
             
-            // 2. Vẽ viền
+            // 2. Vẽ viền khối
             ctx.strokeRect(px, py, drawSize, drawSize);
             
-            // 3. Highlight nhẹ
+            // 3. Highlight (chỉ hiện khi không bật mù màu)
             if (!isColorBlindMode) {
                 ctx.fillStyle = COLORS.HIGHLIGHT;
                 ctx.fillRect(px + 2, py + 2, drawSize - 4, drawSize * 0.3);
             }
 
-            // 4. CHẾ ĐỘ MÙ MÀU: Vẽ ký tự tên khối (F, I, L...)
+            // 4. CHẾ ĐỘ MÙ MÀU: Vẽ biểu tượng hình học
             if (isColorBlindMode) {
-                // Vẽ viền chữ màu trắng để nổi trên mọi nền
-                ctx.strokeStyle = 'white';
+                const cx = px + drawSize/2;
+                const cy = py + drawSize/2;
+
+                // Vẽ viền biểu tượng màu đen đậm cho dễ nhìn
+                ctx.strokeStyle = 'black';
                 ctx.lineWidth = 3;
-                ctx.strokeText(this.key, px + drawSize/2, py + drawSize/2);
+                ctx.strokeText(this.symbol, cx, cy);
                 
-                // Vẽ lòng chữ màu đen
-                ctx.fillStyle = 'black';
-                ctx.fillText(this.key, px + drawSize/2, py + drawSize/2);
+                // Vẽ lòng biểu tượng màu trắng để tương phản cao
+                ctx.fillStyle = 'white';
+                ctx.fillText(this.symbol, cx, cy);
                 
-                // Reset lại stroke style cho ô vuông tiếp theo
+                // Reset lại stroke style cho ô tiếp theo
                 ctx.strokeStyle = '#222';
                 ctx.lineWidth = 1.5;
             }
@@ -222,7 +233,6 @@ function initGame() {
     document.getElementById('btnReset').addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation(); resetGame();
     });
-    // SỰ KIỆN MỚI: BẬT/TẮT MÙ MÀU
     document.getElementById('btnColorBlind').addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation(); 
         toggleColorBlind();
@@ -234,7 +244,6 @@ function initGame() {
 function toggleColorBlind() {
     isColorBlindMode = !isColorBlindMode;
     const btn = document.getElementById('btnColorBlind');
-    // Đổi style nút bấm để biết đang bật hay tắt
     if(isColorBlindMode) {
         btn.style.backgroundColor = '#222';
         btn.style.border = '2px solid white';
@@ -242,7 +251,7 @@ function toggleColorBlind() {
         btn.style.backgroundColor = '#555';
         btn.style.border = 'none';
     }
-    draw(); // Vẽ lại toàn bộ
+    draw(); 
 }
 
 function resetGame() {
@@ -272,7 +281,7 @@ function resizeCanvas() {
 
     MARGIN_X = (w - (BOARD_COLS * CELL_SIZE)) / 2;
     if (MARGIN_X < 5) MARGIN_X = 5;
-    MARGIN_Y = 80; // Margin lớn hơn cho header
+    MARGIN_Y = 80; 
 
     const requiredHeight = createPiecesLayout();
     canvas.height = requiredHeight + 100;
