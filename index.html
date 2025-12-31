@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pentolendar Mobile</title>
-    <link rel="icon" type="image/svg+xml" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
+    <title>Pentolendar</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#F0E6D2">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="floating-controls">
-        <button id="btnRotate">🔄 Xoay</button>
-        <button id="btnFlip">↔️ Lật</button>
-        <button id="btnReset" style="background-color: #C83232;">⏮️ Reset</button>
+    <div class="controls-header">
+        <div class="group-left">
+            <button id="btnReset" class="btn-danger">⏮️ Reset</button>
+        </div>
+
+        <div class="group-right">
+            <button id="btnColorBlind" title="Chế độ mù màu">👁️</button>
+            <button id="btnRotate">🔄 Xoay</button>
+            <button id="btnFlip">↔️ Lật</button>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
