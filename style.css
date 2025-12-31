@@ -2,7 +2,10 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    touch-action: none; 
+    /* Chặn menu chuột phải/ấn giữ trên iOS/Android */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -14,6 +17,9 @@ body {
     position: relative;
     overflow-y: auto; 
     -webkit-overflow-scrolling: touch;
+    
+    /* Đảm bảo full màn hình, tránh tai thỏ */
+    padding-top: env(safe-area-inset-top);
 }
 
 canvas {
@@ -23,22 +29,22 @@ canvas {
     touch-action: pan-y; 
 }
 
-/* Header chứa nút bấm */
 .controls-header {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    padding: 10px 15px;
+    /* Thêm padding top để tránh tai thỏ iPhone */
+    padding: max(10px, env(safe-area-inset-top)) 15px 10px 15px;
     display: flex;
-    justify-content: space-between; /* Đẩy 2 nhóm ra 2 đầu */
+    justify-content: space-between;
     align-items: center;
     z-index: 100;
-    background: linear-gradient(to bottom, rgba(240, 230, 210, 0.95), rgba(240, 230, 210, 0)); /* Fade nhẹ nền */
-    pointer-events: none; /* Để bấm xuyên qua vùng trống */
+    background: linear-gradient(to bottom, rgba(240, 230, 210, 0.98), rgba(240, 230, 210, 0.8));
+    pointer-events: none; 
+    backdrop-filter: blur(5px);
 }
 
-/* Các nhóm nút cần bật lại pointer-events */
 .group-left, .group-right {
     pointer-events: auto;
     display: flex;
@@ -54,17 +60,14 @@ button {
     background-color: rgba(160, 100, 60, 0.95);
     color: white;
     font-weight: bold;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-    backdrop-filter: blur(4px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
     touch-action: none;
 }
 
-/* Nút Reset màu đỏ riêng biệt */
 .btn-danger {
     background-color: rgba(200, 50, 50, 0.95) !important;
 }
 
-/* Nút icon (Mù màu) tròn nhỏ hơn chút */
 #btnColorBlind {
     padding: 0;
     width: 40px;
