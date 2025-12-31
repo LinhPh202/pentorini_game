@@ -6,8 +6,9 @@ const BOARD_ROWS = 9;
 const BOARD_COLS = 7;
 let CELL_SIZE = 35; 
 
-const TRAY_SCALE = 0.45; 
-const TRAY_GAP = 12; 
+// Scale nhỏ gọn
+const TRAY_SCALE = 0.4; 
+const TRAY_GAP = 15; 
 
 let MARGIN_X = 10;
 let MARGIN_Y = 80; 
@@ -19,28 +20,15 @@ const COLORS = {
     TEXT: '#50463C', TEXT_RED: '#C83232', HIGHLIGHT: 'rgba(255, 255, 255, 0.4)',
 };
 
-// Bảng màu tương phản cao
 const SHAPE_COLORS = {
     'F': '#DC143C', 'I': '#00BFFF', 'L': '#FF8C00', 'P': '#FFD700',
     'N': '#32CD32', 'T': '#9400D3', 'U': '#4169E1', 'V': '#FF1493',
     'W': '#008080', 'X': '#808080', 'Y': '#8B4513', 'Z': '#2E8B57'
 };
 
-// --- MỚI: BẢNG BIỂU TƯỢNG CHO CHẾ ĐỘ MÙ MÀU ---
-// Sử dụng các ký tự hình học đơn giản, dễ nhìn
 const SYMBOL_MAP = {
-    'F': '■', // Hình vuông đặc
-    'I': '●', // Hình tròn đặc
-    'L': '▲', // Tam giác hướng lên
-    'P': '▼', // Tam giác hướng xuống
-    'N': '◆', // Hình thoi đặc
-    'T': '✚', // Dấu cộng đậm
-    'U': '✕', // Dấu nhân đậm
-    'V': '○', // Hình tròn rỗng
-    'W': '□', // Hình vuông rỗng
-    'X': '★', // Ngôi sao
-    'Y': '△', // Tam giác rỗng
-    'Z': '◇'  // Hình thoi rỗng
+    'F': '■', 'I': '●', 'L': '▲', 'P': '▼', 'N': '◆', 'T': '✚',
+    'U': '✕', 'V': '○', 'W': '□', 'X': '★', 'Y': '△', 'Z': '◇'
 };
 
 const BOARD_CONTENT = [
@@ -80,7 +68,7 @@ class Piece {
         this.gridPos = null; 
         this.isDragging = false;
         this.color = SHAPE_COLORS[this.key] || '#A0643C';
-        this.symbol = SYMBOL_MAP[this.key] || '?'; // Lấy biểu tượng
+        this.symbol = SYMBOL_MAP[this.key] || '?';
         this.normalize(this.shape);
     }
 
@@ -97,9 +85,7 @@ class Piece {
         ctx.lineWidth = 1.5;
         ctx.lineJoin = 'round';
 
-        // Cài đặt font cho biểu tượng. Sử dụng font icon hoặc Arial Unicode
         if (isColorBlindMode) {
-            // Kích thước biểu tượng khoảng 70% ô
             ctx.font = `${drawSize * 0.7}px sans-serif`; 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -109,34 +95,23 @@ class Piece {
             const px = this.x + cell.c * drawSize;
             const py = this.y + cell.r * drawSize;
             
-            // 1. Vẽ nền màu
             ctx.fillStyle = this.color;
             ctx.fillRect(px, py, drawSize, drawSize);
-            
-            // 2. Vẽ viền khối
             ctx.strokeRect(px, py, drawSize, drawSize);
             
-            // 3. Highlight (chỉ hiện khi không bật mù màu)
             if (!isColorBlindMode) {
                 ctx.fillStyle = COLORS.HIGHLIGHT;
                 ctx.fillRect(px + 2, py + 2, drawSize - 4, drawSize * 0.3);
             }
 
-            // 4. CHẾ ĐỘ MÙ MÀU: Vẽ biểu tượng hình học
             if (isColorBlindMode) {
                 const cx = px + drawSize/2;
                 const cy = py + drawSize/2;
-
-                // Vẽ viền biểu tượng màu đen đậm cho dễ nhìn
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 3;
                 ctx.strokeText(this.symbol, cx, cy);
-                
-                // Vẽ lòng biểu tượng màu trắng để tương phản cao
                 ctx.fillStyle = 'white';
                 ctx.fillText(this.symbol, cx, cy);
-                
-                // Reset lại stroke style cho ô tiếp theo
                 ctx.strokeStyle = '#222';
                 ctx.lineWidth = 1.5;
             }
@@ -289,16 +264,47 @@ function resizeCanvas() {
     draw();
 }
 
+// --- THUẬT TOÁN MỚI: CĂN GIỮA CÁC KHỐI ---
 function createPiecesLayout() {
     pieces = [];
     const keys = Object.keys(SHAPES);
     const startTrayY = MARGIN_Y + (BOARD_ROWS * CELL_SIZE) + 30; 
     
-    let currentX = 15;
     let currentY = startTrayY;
     let rowMaxH = 0;
     const trayCellSize = CELL_SIZE * TRAY_SCALE;
     
+    // Mảng tạm để chứa các khối của 1 hàng trước khi vẽ
+    let currentRowPieces = [];
+    let currentRowWidth = 0;
+
+    // Helper: Hàm xử lý việc căn giữa và đẩy row vào mảng chính
+    function flushRow() {
+        if (currentRowPieces.length === 0) return;
+
+        // Tính toán khoảng lề trái để căn giữa
+        // Tổng không gian = Chiều rộng Canvas
+        // Chiều rộng hàng = currentRowWidth
+        // StartX = (Canvas - RowWidth) / 2
+        let startX = (canvas.width - currentRowWidth) / 2;
+
+        currentRowPieces.forEach(p => {
+            p.piece.x = startX;
+            p.piece.y = currentY;
+            p.piece.initialPos = {x: startX, y: currentY};
+            pieces.push(p.piece);
+            
+            // Cập nhật startX cho khối tiếp theo trong hàng
+            startX += p.width + TRAY_GAP;
+        });
+
+        // Reset cho dòng mới
+        currentY += rowMaxH + TRAY_GAP;
+        currentRowPieces = [];
+        currentRowWidth = 0;
+        rowMaxH = 0;
+    }
+
     keys.forEach((key) => {
         let tempPiece = new Piece(key, 0, 0);
         let shape = tempPiece.shape;
@@ -313,20 +319,25 @@ function createPiecesLayout() {
         let pWidth = (Math.max(...finalShape.map(c=>c.c)) + 1) * trayCellSize;
         let pHeight = (Math.max(...finalShape.map(c=>c.r)) + 1) * trayCellSize;
 
-        if (currentX + pWidth > canvas.width - 5) {
-            currentX = 15;
-            currentY += rowMaxH + TRAY_GAP; 
-            rowMaxH = 0;
+        // Nếu thêm khối này vào mà bị tràn dòng -> Flush dòng cũ
+        // Lưu ý: currentRowWidth đã bao gồm gap của các khối trước
+        // Ta cộng thêm gap cho khối mới (trừ khối đầu tiên)
+        let gapToAdd = currentRowPieces.length > 0 ? TRAY_GAP : 0;
+        
+        if (currentRowWidth + gapToAdd + pWidth > canvas.width - 10) {
+            flushRow();
+            gapToAdd = 0; // Reset gap vì đây là khối đầu dòng mới
         }
 
-        tempPiece.x = currentX;
-        tempPiece.y = currentY;
-        tempPiece.initialPos = {x: currentX, y: currentY}; 
-        pieces.push(tempPiece);
+        // Thêm vào hàng chờ
+        currentRowPieces.push({piece: tempPiece, width: pWidth});
+        currentRowWidth += gapToAdd + pWidth;
         
-        currentX += pWidth + TRAY_GAP; 
         if (pHeight > rowMaxH) rowMaxH = pHeight;
     });
+
+    // Flush nốt hàng cuối cùng (nếu còn)
+    flushRow();
 
     return currentY + rowMaxH;
 }
